@@ -252,6 +252,28 @@ tr.cur td:first-child{border-left:2px solid var(--text)}
 .mc-num-neg{color:var(--red)}
 .mc-num-zero{color:var(--text3)}
 
+/* MODAL DETAIL */
+.mc-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px)}
+.mc-modal{background:var(--bg);border:1px solid var(--border2);border-radius:var(--rl);width:100%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.14)}
+.mc-modal-hdr{display:flex;align-items:flex-start;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.mc-modal-title{flex:1;min-width:0}
+.mc-modal-title h3{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px}
+.mc-modal-title p{font-size:11.5px;color:var(--text2)}
+.mc-modal-close{background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);padding:0 2px;line-height:1;flex-shrink:0;transition:color .1s}
+.mc-modal-close:hover{color:var(--text)}
+.mc-modal-body{overflow-y:auto;padding:12px 20px 20px;display:flex;flex-direction:column;gap:6px}
+.mc-modal-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);transition:box-shadow .1s}
+.mc-modal-item:hover{box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.mc-modal-item-info{flex:1;min-width:0}
+.mc-modal-item-name{font-size:12px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-modal-item-meta{font-size:10.5px;color:var(--text2);margin-top:2px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.mc-modal-item-amt{font-size:12px;font-weight:600;font-family:var(--mono);flex-shrink:0}
+.mc-modal-total{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-top:1.5px solid var(--border2);margin-top:4px;flex-shrink:0}
+.mc-modal-total span:first-child{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em}
+.mc-modal-total span:last-child{font-size:13px;font-weight:700;font-family:var(--mono)}
+.mc-clickable{cursor:pointer;border-radius:3px;transition:background .1s}
+.mc-clickable:hover{background:rgba(0,0,0,.05);text-decoration:underline;text-decoration-style:dotted}
+
 /* LOADING */
 #loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100;font-size:13px;color:var(--text3)}
 </style>
@@ -284,10 +306,7 @@ tr.cur td:first-child{border-left:2px solid var(--text)}
       <button class="tab" id="tab-cat" onclick="showPage('cat')">Kategori</button>
       <button class="tab" id="tab-mc" onclick="showPage('mc')">Monthly Report</button>
     </div>
-    <div class="saldo-box">
-      <label>Saldo hari ini</label>
-      <input type="number" id="saldo-inp" placeholder="0" oninput="onSaldo(this.value)">
-    </div>
+    <input type="number" id="saldo-inp" style="display:none" oninput="onSaldo(this.value)">
     <div class="chips" id="chips"></div>
     <span class="save-indicator" id="save-ind">Tersimpan</span>
     <div class="user-info">
@@ -969,9 +988,7 @@ const QMAP={3:'Q2',4:'Q2',5:'Q2',6:'Q3',7:'Q3',8:'Q3',9:'Q4',10:'Q4',11:'Q4'};
 
 function buildMCData(inclEst){
   const all=[...S.items.filter(z=>!z.isKemb&&(inclEst||!z.isEst)),...xr()];
-  // Map week → month
   const weekMonth={};for(const w of WEEKS)weekMonth[w.num]=w.month;
-  // Per month data: {catId→{catName,subMap:{subcatName→amount},total}}
   const data={};
   for(const m of MONTHS_2026)data[m]={in:{},out:{}};
 
@@ -982,8 +999,11 @@ function buildMCData(inclEst){
     const cid=z.catId||'__uncategorized';
     const cname=z.catName||'Lainnya';
     const sname=z.subcatName||z.name;
-    if(!bucket[cid])bucket[cid]={catName:cname,subs:{}};
+    if(!bucket[cid])bucket[cid]={catName:cname,subs:{},items:{}};
     bucket[cid].subs[sname]=(bucket[cid].subs[sname]||0)+z.amount;
+    // Store individual items for drilldown
+    if(!bucket[cid].items[sname])bucket[cid].items[sname]=[];
+    bucket[cid].items[sname].push(z);
   }
   return data;
 }
@@ -992,6 +1012,14 @@ function mcNum(v,cls){
   if(!v)return`<span class="mc-num-zero">—</span>`;
   const c=cls||(v>0?'mc-num-pos':'mc-num-neg');
   return`<span class="${c}">${v<0?'-':''}${rp(Math.abs(v))}</span>`;
+}
+
+function mcNumClickable(v,cls,drilldownData,label){
+  if(!v)return`<span class="mc-num-zero">—</span>`;
+  const c=cls||(v>0?'mc-num-pos':'mc-num-neg');
+  const encoded=encodeURIComponent(JSON.stringify(drilldownData));
+  const labelEncoded=encodeURIComponent(label||'');
+  return`<span class="${c} mc-clickable" onclick="showMCModal(decodeURIComponent('${encoded}'),decodeURIComponent('${labelEncoded}'),${v})">${v<0?'-':''}${rp(Math.abs(v))}</span>`;
 }
 
 function renderMC(){
@@ -1035,7 +1063,7 @@ function renderMC(){
     html+=`<tr class="cat-header"><td style="padding-left:8px;font-weight:500;font-size:11px">${cv.catName}</td>${months.map(m=>`<td>${mcNum(Object.values(data[m].in[cid]?.subs||{}).reduce((a,b)=>a+b,0))}</td>`).join('')}<td style="border-left:2px solid var(--border2)">${mcNum(catTotal)}</td></tr>`;
     for(const [sname] of Object.entries(Object.assign({},...months.map(m=>data[m].in[cid]?.subs||{})))){
       const sTotal=months.reduce((s,m)=>s+(data[m].in[cid]?.subs[sname]||0),0);
-      html+=`<tr class="sub-row"><td>${sname}</td>${months.map(m=>`<td>${mcNum(data[m].in[cid]?.subs[sname]||0)}</td>`).join('')}<td style="border-left:2px solid var(--border2)">${mcNum(sTotal)}</td></tr>`;
+      html+=`<tr class="sub-row"><td>${sname}</td>${months.map(m=>{const items=data[m].in[cid]?.items?.[sname]||[];const v=data[m].in[cid]?.subs[sname]||0;return`<td>${items.length?mcNumClickable(v,'',items,sname+' · '+MID[m]):mcNum(v)}</td>`;}).join('')}<td style="border-left:2px solid var(--border2)">${mcNum(sTotal)}</td></tr>`;
     }
   }
   html+=`<tr class="total-row"><td>TOTAL PENDAPATAN</td>${months.map(m=>`<td>${mcNum(mRevenue[m])}</td>`).join('')}<td style="border-left:2px solid var(--border2)">${mcNum(totalRev)}</td></tr>`;
@@ -1050,7 +1078,7 @@ function renderMC(){
     html+=`<tr class="cat-header"><td style="padding-left:8px;font-weight:500;font-size:11px">${cv}</td>${months.map(m=>`<td>${mcNum(Object.values(data[m].out[cid]?.subs||{}).reduce((a,b)=>a+b,0),'mc-num-neg')}</td>`).join('')}<td style="border-left:2px solid var(--border2)">${mcNum(catTotal,'mc-num-neg')}</td></tr>`;
     for(const sname of Object.keys(allSubs)){
       const sTotal=months.reduce((s,m)=>s+(data[m].out[cid]?.subs[sname]||0),0);
-      html+=`<tr class="sub-row"><td>${sname}</td>${months.map(m=>`<td>${mcNum(data[m].out[cid]?.subs[sname]||0,'mc-num-neg')}</td>`).join('')}<td style="border-left:2px solid var(--border2)">${mcNum(sTotal,'mc-num-neg')}</td></tr>`;
+      html+=`<tr class="sub-row"><td>${sname}</td>${months.map(m=>{const items=data[m].out[cid]?.items?.[sname]||[];const v=data[m].out[cid]?.subs[sname]||0;return`<td>${items.length?mcNumClickable(v,'mc-num-neg',items,sname+' · '+MID[m]):mcNum(v,'mc-num-neg')}</td>`;}).join('')}<td style="border-left:2px solid var(--border2)">${mcNum(sTotal,'mc-num-neg')}</td></tr>`;
     }
   }
   html+=`<tr class="total-row highlight-row"><td>GROSS PROFIT</td>${months.map(m=>`<td class="${mGrossProfit[m]>=0?'mc-num-pos':'mc-num-neg'}">${rpS(mGrossProfit[m])}</td>`).join('')}<td style="border-left:2px solid var(--border2)" class="${totalGP>=0?'mc-num-pos':'mc-num-neg'}">${rpS(totalGP)}</td></tr>`;
@@ -1067,7 +1095,7 @@ function renderMC(){
     html+=`<tr class="cat-header"><td style="padding-left:8px;font-weight:500;font-size:11px">${cv}</td>${months.map(m=>`<td>${mcNum(Object.values(data[m].out[cid]?.subs||{}).reduce((a,b)=>a+b,0),'mc-num-neg')}</td>`).join('')}<td style="border-left:2px solid var(--border2)">${mcNum(catTotal,'mc-num-neg')}</td></tr>`;
     for(const sname of Object.keys(allSubs)){
       const sTotal=months.reduce((s,m)=>s+(data[m].out[cid]?.subs[sname]||0),0);
-      html+=`<tr class="sub-row"><td>${sname}</td>${months.map(m=>`<td>${mcNum(data[m].out[cid]?.subs[sname]||0,'mc-num-neg')}</td>`).join('')}<td style="border-left:2px solid var(--border2)">${mcNum(sTotal,'mc-num-neg')}</td></tr>`;
+      html+=`<tr class="sub-row"><td>${sname}</td>${months.map(m=>{const items=data[m].out[cid]?.items?.[sname]||[];const v=data[m].out[cid]?.subs[sname]||0;return`<td>${items.length?mcNumClickable(v,'mc-num-neg',items,sname+' · '+MID[m]):mcNum(v,'mc-num-neg')}</td>`;}).join('')}<td style="border-left:2px solid var(--border2)">${mcNum(sTotal,'mc-num-neg')}</td></tr>`;
     }
   }
   html+=`<tr class="section-gap"><td colspan="${months.length+2}"></td></tr>`;
@@ -1431,6 +1459,62 @@ async function confirmAIParse(){
 // ============================================================
 
 function render(){renderItems();renderRec();renderCats();renderTable();}
+
+// MC MODAL DRILLDOWN
+function showMCModal(jsonStr, label, total){
+  try{
+    const items = JSON.parse(jsonStr);
+    const isOut = items[0]?.type === 'out';
+
+    document.getElementById('mc-modal-title').textContent = label;
+    document.getElementById('mc-modal-sub').textContent = items.length + ' transaksi';
+
+    const body = document.getElementById('mc-modal-body');
+    body.innerHTML = items.map(z => {
+      const w = WEEKS[z.week-1];
+      const weekLabel = w ? `Mgg ${w.num} · ${w.label}` : `Mgg ${z.week}`;
+      const accA = ACCS[z.account]||ACCS.utama;
+      const estMark = z.isEst ? `<span class="est-badge" style="font-size:9px">Estimasi</span>` : '';
+      const recMark = z.isRec ? `<span style="font-size:9px;color:var(--text3)">↻ Recurring</span>` : '';
+      const fileLink = z.file ? `<a href="${z.file.url}" target="_blank" style="font-size:10px;color:var(--blue);text-decoration:none">📎</a>` : '';
+      const amtColor = isOut ? 'var(--red)' : 'var(--green)';
+      return `<div class="mc-modal-item">
+        <div class="mc-modal-item-info">
+          <div class="mc-modal-item-name">${x(z.name)} ${fileLink}</div>
+          <div class="mc-modal-item-meta">
+            <span class="ab ${accA.cls}">${accA.label}</span>
+            <span>${weekLabel}</span>
+            ${estMark}${recMark}
+          </div>
+        </div>
+        <div class="mc-modal-item-amt" style="color:${amtColor}">${isOut?'-':'+'} ${rp(z.amount)}</div>
+      </div>`;
+    }).join('');
+
+    // Total footer
+    const totalEl = document.getElementById('mc-modal-total');
+    const totalAmtEl = document.getElementById('mc-modal-total-amt');
+    if(items.length > 1){
+      totalEl.style.display = 'flex';
+      const amtColor = isOut ? 'var(--red)' : 'var(--green)';
+      totalAmtEl.style.color = amtColor;
+      totalAmtEl.textContent = (isOut ? '- ' : '+ ') + rp(Math.abs(total));
+    } else {
+      totalEl.style.display = 'none';
+    }
+
+    document.getElementById('mc-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  } catch(e){ console.error('Modal error', e); }
+}
+
+function closeMCModal(){
+  document.getElementById('mc-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// Close modal on Escape
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeMCModal(); });
 
 // SIDEBAR TOGGLE
 let sidebarOpen = true;
