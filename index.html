@@ -472,6 +472,24 @@ tr.cur td:first-child{border-left:2px solid var(--text)}
 
 </div>
 
+<!-- MODAL DETAIL TRANSAKSI -->
+<div id="mc-modal" class="mc-modal-overlay" style="display:none" onclick="if(event.target===this)closeMCModal()">
+  <div class="mc-modal">
+    <div class="mc-modal-hdr">
+      <div class="mc-modal-title">
+        <h3 id="mc-modal-title">Detail Transaksi</h3>
+        <p id="mc-modal-sub"></p>
+      </div>
+      <button class="mc-modal-close" onclick="closeMCModal()">×</button>
+    </div>
+    <div class="mc-modal-body" id="mc-modal-body"></div>
+    <div class="mc-modal-total" id="mc-modal-total" style="display:none">
+      <span>Total</span>
+      <span id="mc-modal-total-amt"></span>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============================================================
 // FIREBASE CONFIG — ISI SESUAI PROJECT LO
