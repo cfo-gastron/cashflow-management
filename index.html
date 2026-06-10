@@ -465,6 +465,9 @@ tr.cur td:first-child{border-left:2px solid var(--text)}
         <button onclick="downloadMCExcel()" style="font-size:12px;padding:6px 14px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);cursor:pointer;font-family:var(--font);font-weight:500;display:flex;align-items:center;gap:6px">
           ⬇ Download Excel
         </button>
+        <button onclick="exportJSON()" style="font-size:12px;padding:6px 14px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);cursor:pointer;font-family:var(--font);font-weight:500;display:flex;align-items:center;gap:6px">
+          {} Export JSON
+        </button>
       </div>
     </div>
     <div id="mc-area" style="flex:1;overflow:auto;padding:16px 20px;background:var(--bg)"></div>
@@ -1477,6 +1480,60 @@ async function confirmAIParse(){
 // ============================================================
 
 function render(){renderItems();renderRec();renderCats();renderTable();}
+
+function exportJSON(){
+  const weekMonth={};for(const w of WEEKS)weekMonth[w.num]=w.month;
+  const MN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
+  // Enrich items with readable fields
+  const items = S.items.map(z => {
+    const w = WEEKS.find(w=>w.num===z.week)||{};
+    return {
+      ...z,
+      _week_label: w.label || '',
+      _month: MN[weekMonth[z.week]] || '',
+    };
+  });
+
+  // Enrich recurring
+  const recurring = (S.recurring||[]).map(r => ({...r}));
+
+  // Build monthly summary
+  const inclEst = true;
+  const data = buildMCData(inclEst);
+  const summary = {};
+  for(const m of MONTHS_2026){
+    const mn = MN[m];
+    summary[mn] = { pendapatan:{}, cogs:{}, opex:{} };
+    for(const [cid,cv] of Object.entries(data[m].in)){
+      summary[mn].pendapatan[cv.catName] = {};
+      for(const [sname,amt] of Object.entries(cv.subs)) summary[mn].pendapatan[cv.catName][sname]=amt;
+    }
+    for(const [cid,cv] of Object.entries(data[m].out)){
+      const isCogs = cid==='d_cogs';
+      const bucket = isCogs ? summary[mn].cogs : summary[mn].opex;
+      bucket[cv.catName] = bucket[cv.catName]||{};
+      for(const [sname,amt] of Object.entries(cv.subs)) bucket[cv.catName][sname]=(bucket[cv.catName][sname]||0)+amt;
+    }
+  }
+
+  const payload = {
+    exported_at: new Date().toISOString(),
+    saldo_awal: S.saldo||0,
+    categories: S.categories||[],
+    items,
+    recurring,
+    monthly_summary: summary,
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'gastron-cashflow-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 // MC MODAL DRILLDOWN
 function showMCModal(jsonStr, label, total){
