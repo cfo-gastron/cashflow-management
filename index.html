@@ -327,47 +327,103 @@ tr.cur td:first-child{border-left:2px solid var(--text)}
         <div class="section-body open" id="form-body">
           <div style="display:flex;flex-direction:column;gap:8px;padding:10px 2px 4px">
 
-          <!-- AI TEXT INPUT -->
-          <div class="fg">
-            <label>Ketik transaksi</label>
-            <textarea id="ai-input" rows="3" placeholder="cth: bayar gaji driver 5jt minggu ini&#10;atau: top up gas 50 juta dari rekening procurement" style="font-size:12px;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);width:100%;font-family:var(--font);outline:none;resize:none;transition:border .15s;line-height:1.5" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();parseAI();}"></textarea>
-            <span style="font-size:10px;color:var(--text2)">Enter untuk parse · Shift+Enter baris baru</span>
+          <!-- MODE TOGGLE -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+            <button class="t-btn on-in" id="mode-ai-btn" onclick="setFormMode('ai')" style="font-size:11px">✦ Parse AI</button>
+            <button class="t-btn" id="mode-manual-btn" onclick="setFormMode('manual')" style="font-size:11px">✏ Manual</button>
           </div>
 
-          <!-- IMAGE UPLOAD -->
-          <div class="fg">
-            <label>Atau screenshot / struk</label>
-            <input type="file" id="ai-img-inp" style="display:none" accept=".jpg,.jpeg,.png,.webp" onchange="onAIImageSelect(this)">
-            <div class="file-zone" onclick="document.getElementById('ai-img-inp').click()" id="ai-img-zone" style="flex-direction:column;align-items:flex-start;gap:3px;padding:8px 10px">
-              <div style="display:flex;align-items:center;gap:7px"><span>📸</span><span class="fz-txt">Klik untuk pilih file</span></div>
-              <div style="font-size:10px;color:var(--text2);padding-left:2px">atau <b>Ctrl+V</b> untuk paste screenshot langsung</div>
+          <!-- AI MODE -->
+          <div id="mode-ai">
+            <!-- AI TEXT INPUT -->
+            <div class="fg" style="margin-bottom:8px">
+              <label>Ketik transaksi</label>
+              <textarea id="ai-input" rows="3" placeholder="cth: bayar gaji driver 5jt minggu ini&#10;atau: top up gas 50 juta dari rekening procurement" style="font-size:12px;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);width:100%;font-family:var(--font);outline:none;resize:none;transition:border .15s;line-height:1.5" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();parseAI();}"></textarea>
+              <span style="font-size:10px;color:var(--text2)">Enter untuk parse · Shift+Enter baris baru</span>
             </div>
-            <div class="file-sel" id="ai-img-sel" style="display:none">
-              <span>📸</span>
-              <span class="file-sel-name" id="ai-img-name"></span>
-              <button class="icon-btn" onclick="clearAIImage()" style="font-size:15px">×</button>
+
+            <!-- IMAGE UPLOAD -->
+            <div class="fg" style="margin-bottom:8px">
+              <label>Atau screenshot / struk</label>
+              <input type="file" id="ai-img-inp" style="display:none" accept=".jpg,.jpeg,.png,.webp" onchange="onAIImageSelect(this)">
+              <div class="file-zone" onclick="document.getElementById('ai-img-inp').click()" id="ai-img-zone" style="flex-direction:column;align-items:flex-start;gap:3px;padding:8px 10px">
+                <div style="display:flex;align-items:center;gap:7px"><span>📸</span><span class="fz-txt">Klik untuk pilih file</span></div>
+                <div style="font-size:10px;color:var(--text2);padding-left:2px">atau <b>Ctrl+V</b> untuk paste screenshot langsung</div>
+              </div>
+              <div class="file-sel" id="ai-img-sel" style="display:none">
+                <span>📸</span>
+                <span class="file-sel-name" id="ai-img-name"></span>
+                <button class="icon-btn" onclick="clearAIImage()" style="font-size:15px">×</button>
+              </div>
+            </div>
+
+            <!-- PARSE BUTTON -->
+            <button class="add-btn" id="parse-btn" onclick="parseAI()" style="background:var(--text);color:var(--bg);border-color:var(--text)">✦ Parse dengan AI</button>
+
+            <!-- LOADING STATE -->
+            <div id="ai-loading" style="display:none;text-align:center;padding:10px;font-size:11px;color:var(--text2)">
+              <span id="ai-loading-txt">Menganalisis...</span>
+            </div>
+
+            <!-- PREVIEW HASIL PARSE -->
+            <div id="ai-preview" style="display:none;border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-top:8px">
+              <div style="padding:7px 10px;background:var(--bg2);font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between">
+                <span>Hasil Parse AI</span>
+                <button class="icon-btn" onclick="closePreview()" style="font-size:13px">×</button>
+              </div>
+              <div id="ai-preview-body" style="padding:10px;display:flex;flex-direction:column;gap:8px"></div>
+              <div style="padding:8px 10px;border-top:1px solid var(--border);display:flex;gap:6px">
+                <button class="conf-btn" style="flex:1;padding:7px" onclick="confirmAIParse()">✓ Simpan</button>
+                <button class="canc-btn" onclick="closePreview()">Batal</button>
+              </div>
             </div>
           </div>
 
-          <!-- PARSE BUTTON -->
-          <button class="add-btn" id="parse-btn" onclick="parseAI()" style="background:var(--text);color:var(--bg);border-color:var(--text)">✦ Parse dengan AI</button>
-
-          <!-- LOADING STATE -->
-          <div id="ai-loading" style="display:none;text-align:center;padding:10px;font-size:11px;color:var(--text2)">
-            <span id="ai-loading-txt">Menganalisis...</span>
-          </div>
-
-          <!-- PREVIEW HASIL PARSE -->
-          <div id="ai-preview" style="display:none;border:1px solid var(--border2);border-radius:var(--r);overflow:hidden">
-            <div style="padding:7px 10px;background:var(--bg2);font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between">
-              <span>Hasil Parse AI</span>
-              <button class="icon-btn" onclick="closePreview()" style="font-size:13px">×</button>
+          <!-- MANUAL MODE -->
+          <div id="mode-manual" style="display:none;display:flex;flex-direction:column;gap:8px">
+            <div class="type-row">
+              <button class="t-btn on-in" id="m-btn-in" onclick="setMT('in')">Masuk</button>
+              <button class="t-btn" id="m-btn-out" onclick="setMT('out')">Keluar</button>
             </div>
-            <div id="ai-preview-body" style="padding:10px;display:flex;flex-direction:column;gap:8px"></div>
-            <div style="padding:8px 10px;border-top:1px solid var(--border);display:flex;gap:6px">
-              <button class="conf-btn" style="flex:1;padding:7px" onclick="confirmAIParse()">✓ Simpan</button>
-              <button class="canc-btn" onclick="closePreview()">Batal</button>
+            <div class="fg"><label>Nama / Keterangan</label>
+              <input type="text" id="m-name" placeholder="cth: Gaji Tim">
             </div>
+            <div class="fg"><label>Jumlah (Rp)</label>
+              <input type="number" id="m-amount" placeholder="0">
+            </div>
+            <div class="fg"><label>Minggu</label>
+              <select id="m-week"></select>
+            </div>
+            <div class="fg"><label>Rekening</label>
+              <select id="m-acc">
+                <option value="utama">Utama</option>
+                <option value="buffer">Buffer</option>
+                <option value="petty">Petty Cash</option>
+                <option value="procurement">Procurement</option>
+              </select>
+            </div>
+            <div class="fg"><label>Kategori</label>
+              <select id="m-cat" onchange="onCC('m-cat','m-subcat')"><option value="">— Pilih kategori —</option></select>
+            </div>
+            <div class="fg"><label>Subkategori</label>
+              <select id="m-subcat"><option value="">—</option></select>
+            </div>
+            <div class="fg"><label>Lampiran (opsional)</label>
+              <input type="file" id="m-file-inp" style="display:none" onchange="onMFileSelect(this)">
+              <div class="file-zone" onclick="document.getElementById('m-file-inp').click()" id="m-file-zone">
+                <span>📎</span><span class="fz-txt">Klik untuk upload file</span>
+              </div>
+              <div class="file-sel" id="m-file-sel" style="display:none">
+                <span>📎</span>
+                <span class="file-sel-name" id="m-file-name"></span>
+                <button class="icon-btn" onclick="clearMFile()" style="font-size:15px">×</button>
+              </div>
+            </div>
+            <div class="est-toggle" onclick="document.getElementById('m-est').click()">
+              <input type="checkbox" id="m-est">
+              <span>Tandai sebagai Estimasi</span>
+            </div>
+            <button class="add-btn" onclick="addManual()">+ Tambah Transaksi</button>
           </div>
 
 
@@ -1483,6 +1539,122 @@ async function confirmAIParse(){
 // ============================================================
 
 function render(){renderItems();renderRec();renderCats();renderTable();}
+// FORM MODE TOGGLE
+let formMode = 'ai';
+function setFormMode(mode){
+  formMode = mode;
+  document.getElementById('mode-ai').style.display = mode==='ai' ? 'flex' : 'none';
+  document.getElementById('mode-ai').style.flexDirection = 'column';
+  document.getElementById('mode-ai').style.gap = '8px';
+  document.getElementById('mode-manual').style.display = mode==='manual' ? 'flex' : 'none';
+  document.getElementById('mode-manual').style.flexDirection = 'column';
+  document.getElementById('mode-manual').style.gap = '8px';
+  document.getElementById('mode-ai-btn').className = 't-btn' + (mode==='ai' ? ' on-in' : '');
+  document.getElementById('mode-manual-btn').className = 't-btn' + (mode==='manual' ? ' on-in' : '');
+  if(mode==='manual') initManualForm();
+}
+
+// MANUAL FORM
+let mType = 'out';
+let mFile = null;
+
+function setMT(t){
+  mType = t;
+  document.getElementById('m-btn-in').className = 't-btn' + (t==='in'?' on-in':'');
+  document.getElementById('m-btn-out').className = 't-btn' + (t==='out'?' on-out':'');
+  updCS('m-cat','m-subcat', t);
+}
+
+function initManualForm(){
+  // Populate week select
+  const sel = document.getElementById('m-week');
+  if(!sel.options.length){
+    for(const w of WEEKS){
+      const opt = document.createElement('option');
+      opt.value = w.num;
+      opt.textContent = `Mgg ${w.num} · ${w.label}`;
+      sel.appendChild(opt);
+    }
+    // Set default to current week
+    const now = Date.now();
+    let closest = WEEKS[0];
+    for(const w of WEEKS){
+      if(new Date(w.date+'T00:00:00').getTime() <= now) closest = w;
+    }
+    sel.value = closest.num;
+  }
+  // Populate categories based on current type
+  updCS('m-cat','m-subcat', mType);
+}
+
+function onMFileSelect(inp){
+  if(!inp.files[0]) return;
+  mFile = inp.files[0];
+  document.getElementById('m-file-sel').style.display = 'flex';
+  document.getElementById('m-file-zone').style.display = 'none';
+  document.getElementById('m-file-name').textContent = mFile.name;
+}
+function clearMFile(){
+  mFile = null;
+  document.getElementById('m-file-inp').value = '';
+  document.getElementById('m-file-sel').style.display = 'none';
+  document.getElementById('m-file-zone').style.display = 'flex';
+}
+
+async function addManual(){
+  const name = document.getElementById('m-name').value.trim();
+  const amount = parseFloat(document.getElementById('m-amount').value);
+  const week = parseInt(document.getElementById('m-week').value);
+  const acc = document.getElementById('m-acc').value;
+  const catSel = document.getElementById('m-cat');
+  const subcatSel = document.getElementById('m-subcat');
+  const isEst = document.getElementById('m-est').checked;
+
+  if(!name){ alert('Nama transaksi harus diisi'); return; }
+  if(!amount || amount <= 0){ alert('Jumlah harus lebih dari 0'); return; }
+
+  const catId = catSel.value;
+  const catName = catSel.options[catSel.selectedIndex]?.text || '';
+  const subcatId = subcatSel.value;
+  const subcatName = subcatSel.options[subcatSel.selectedIndex]?.text || '';
+
+  const btn = document.querySelector('#mode-manual .add-btn');
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+
+  let fileObj = null;
+  if(mFile){
+    try {
+      const url = await uploadFile(mFile);
+      fileObj = { name: mFile.name, url };
+    } catch(e){ console.warn('Upload file gagal', e); }
+  }
+
+  const item = {
+    id: 't' + Date.now().toString(36),
+    name, amount, week,
+    type: mType,
+    account: acc,
+    catId, catName, subcatId, subcatName,
+    file: fileObj,
+    isEst,
+    isKemb: false,
+    linkedId: null
+  };
+
+  S.items.unshift(item);
+  debounceSave();
+  render();
+
+  // Reset form
+  document.getElementById('m-name').value = '';
+  document.getElementById('m-amount').value = '';
+  document.getElementById('m-est').checked = false;
+  clearMFile();
+  btn.disabled = false;
+  btn.textContent = '+ Tambah Transaksi';
+}
+
 
 function exportJSON(){
   const weekMonth={};for(const w of WEEKS)weekMonth[w.num]=w.month;
