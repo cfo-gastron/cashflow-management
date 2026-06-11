@@ -1371,10 +1371,13 @@ RESPONSE: Kembalikan HANYA JSON valid seperti ini, tanpa teks lain:
   });
 
   try {
-    const resp = await fetch('/.netlify/functions/parse-transaction', {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'x-api-key': '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',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
