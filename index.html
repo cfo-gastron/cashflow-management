@@ -274,6 +274,13 @@ tr.cur td:first-child{border-left:2px solid var(--text)}
 .mc-clickable{cursor:pointer;border-radius:3px;transition:background .1s}
 .mc-clickable:hover{background:rgba(0,0,0,.05);text-decoration:underline;text-decoration-style:dotted}
 
+/* MONTH COLLAPSE */
+tr.mh td{cursor:pointer;user-select:none}
+tr.mh td:hover{background:var(--bg3)}
+tr.mh .mh-arrow{font-size:9px;color:var(--text3);margin-left:6px;transition:transform .2s;display:inline-block}
+tr.mh.collapsed .mh-arrow{transform:rotate(-90deg)}
+tr.week-row.hidden{display:none}
+
 /* LOADING */
 #loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100;font-size:13px;color:var(--text3)}
 </style>
@@ -380,7 +387,7 @@ tr.cur td:first-child{border-left:2px solid var(--text)}
           </div>
 
           <!-- MANUAL MODE -->
-          <div id="mode-manual" style="display:none;display:flex;flex-direction:column;gap:8px">
+          <div id="mode-manual" style="display:none;flex-direction:column;gap:8px">
             <div class="type-row">
               <button class="t-btn on-in" id="m-btn-in" onclick="setMT('in')">Masuk</button>
               <button class="t-btn" id="m-btn-out" onclick="setMT('out')">Keluar</button>
@@ -573,7 +580,7 @@ const MID=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','S
 const MS=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
 const ACCS={utama:{label:'Utama',cls:'ab-u'},buffer:{label:'Buffer',cls:'ab-b'},petty:{label:'Petty Cash',cls:'ab-p'},procurement:{label:'Procurement',cls:'ab-pr'}};
 
-function gw(){const r=[];let c=new Date(2026,3,6),n=1;const e=new Date(2026,11,28);while(c<=e){const en=new Date(c);en.setDate(en.getDate()+6);r.push({num:n++,start:new Date(c),end:new Date(en),month:c.getMonth(),label:`${c.getDate()} ${MS[c.getMonth()]}`});c.setDate(c.getDate()+7);}return r;}
+function gw(){const r=[];let c=new Date(2026,0,5),n=1;const e=new Date(2026,11,28);while(c<=e){const en=new Date(c);en.setDate(en.getDate()+6);r.push({num:n++,start:new Date(c),end:new Date(en),month:c.getMonth(),label:`${c.getDate()} ${MS[c.getMonth()]}`});c.setDate(c.getDate()+7);}return r;}
 const WEEKS=gw();
 const TODAY=new Date();
 const CUR_W=WEEKS.findIndex(w=>TODAY>=w.start&&TODAY<=w.end)+1||1;
@@ -1005,7 +1012,13 @@ function renderTable(){
     let ti=ins.reduce((s,z)=>s+z.amount,0);
     let to=outs.reduce((s,z)=>s+z.amount,0);
     const open=bal;bal+=ti-to;const close=bal;
-    if(w.month!==pm){rows+=`<tr class="mh"><td colspan="7">${MID[w.month]} 2026</td></tr>`;pm=w.month;}
+    if(w.month!==pm){
+      const isPast = w.month < TODAY.getMonth() || (w.month === TODAY.getMonth() && false);
+      const isCurMonth = w.month === TODAY.getMonth();
+      const collapsed = isPast && !isCurMonth ? 'collapsed' : '';
+      rows+=`<tr class="mh ${collapsed}" id="mh-${w.month}" onclick="toggleMonth(${w.month})"><td colspan="7">${MID[w.month]} 2026 <span class="mh-arrow">▼</span></td></tr>`;
+      pm=w.month;
+    }
     let rc='',bdg='',bc='';
     if(close<0){rc='rd';bdg='Defisit!';bc='bd';dw++;}else if(close<10000000&&(ti>0||to>0)){rc='rw';bdg='Mepet';bc='bw';ww++;}else if(ti>0||to>0){bdg='Aman';bc='bok';}
     const isc=w.num===CUR_W;
@@ -1042,7 +1055,8 @@ function renderTable(){
         <div class="cell-items" id="${cid}" style="display:none">${itemsHtml}</div>`;
     }
 
-    rows+=`<tr class="${rc}${isc?' cur':''}">
+    const mHidden = (w.month < TODAY.getMonth()) ? 'week-row hidden' : 'week-row';
+    rows+=`<tr class="${rc}${isc?' cur':''} ${mHidden}" data-month="${w.month}">
       <td><span class="wnum">Mgg ${w.num}</span>${isc?'<span class="wtag">minggu ini</span>':''}</td>
       <td class="date-cell">${w.label}</td>
       <td><span style="font-size:12px;font-family:var(--mono)">${rpS(open)}</span></td>
@@ -1060,7 +1074,7 @@ function renderTable(){
 // ============================================================
 // MONTHLY CASHFLOW SUMMARY
 // ============================================================
-const MONTHS_2026=[3,4,5,6,7,8,9,10,11]; // Apr-Des (0-indexed)
+const MONTHS_2026=[0,1,2,3,4,5,6,7,8,9,10,11]; // Jan-Des (0-indexed)
 const QMAP={3:'Q2',4:'Q2',5:'Q2',6:'Q3',7:'Q3',8:'Q3',9:'Q4',10:'Q4',11:'Q4'};
 
 function buildMCData(inclEst){
@@ -1536,6 +1550,20 @@ async function confirmAIParse(){
 // ============================================================
 
 function render(){renderItems();renderRec();renderCats();renderTable();}
+// MONTH COLLAPSE
+function toggleMonth(month){
+  const mhRow = document.getElementById('mh-'+month);
+  const weekRows = document.querySelectorAll(`tr[data-month="${month}"]`);
+  const isCollapsed = mhRow.classList.contains('collapsed');
+  if(isCollapsed){
+    mhRow.classList.remove('collapsed');
+    weekRows.forEach(r => r.classList.remove('hidden'));
+  } else {
+    mhRow.classList.add('collapsed');
+    weekRows.forEach(r => r.classList.add('hidden'));
+  }
+}
+
 // FORM MODE TOGGLE
 let formMode = 'ai';
 function setFormMode(mode){
