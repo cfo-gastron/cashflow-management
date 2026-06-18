@@ -632,6 +632,12 @@ async function load(){
       const d=doc.data();
       S.saldo=d.saldo||0;S.items=d.items||[];S.recurring=d.recurring||[];
       if(d.categories&&d.categories.length)S.categories=d.categories;
+      // ONE-TIME MIGRATION: shift week numbers +13 (Jan-Mar added before April)
+      if(!d._weeksMigrated && S.items.length){
+        S.items=S.items.map(z=>({...z,week:z.week+13}));
+        S._weeksMigrated=true;
+        debounceSave();
+      }
     }
   }catch(e){console.error('Load error',e);}
   document.getElementById('saldo-inp').value=S.saldo||'';
