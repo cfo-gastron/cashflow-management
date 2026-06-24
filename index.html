@@ -580,7 +580,7 @@ const MID=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','S
 const MS=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
 const ACCS={utama:{label:'Utama',cls:'ab-u'},buffer:{label:'Buffer',cls:'ab-b'},petty:{label:'Petty Cash',cls:'ab-p'},procurement:{label:'Procurement',cls:'ab-pr'}};
 
-function gw(){const r=[];let c=new Date(2026,0,5),n=1;const e=new Date(2026,11,28);while(c<=e){const en=new Date(c);en.setDate(en.getDate()+6);r.push({num:n++,start:new Date(c),end:new Date(en),month:c.getMonth(),label:`${c.getDate()} ${MS[c.getMonth()]}`});c.setDate(c.getDate()+7);}return r;}
+function gw(){const r=[];let c=new Date(2026,3,6),n=1;const e=new Date(2026,11,28);while(c<=e){const en=new Date(c);en.setDate(en.getDate()+6);r.push({num:n++,start:new Date(c),end:new Date(en),month:c.getMonth(),label:`${c.getDate()} ${MS[c.getMonth()]}`});c.setDate(c.getDate()+7);}return r;}
 const WEEKS=gw();
 const TODAY=new Date();
 const CUR_W=WEEKS.findIndex(w=>TODAY>=w.start&&TODAY<=w.end)+1||1;
@@ -1006,16 +1006,13 @@ function toggleCell(id){
 function renderTable(){
   const all=[...S.items,...xr()];
   let bal=S.saldo,dw=0,ww=0,rows='',pm=-1;
-  const HIST_MONTHS=[0,1,2]; // Jan-Mar: historical, tidak ikut saldo running
   for(const w of WEEKS){
     const ins=all.filter(z=>z.week===w.num&&z.type==='in');
     const outs=all.filter(z=>z.week===w.num&&z.type==='out');
     let ti=ins.reduce((s,z)=>s+z.amount,0);
     let to=outs.reduce((s,z)=>s+z.amount,0);
-    const isHist=HIST_MONTHS.includes(w.month);
-    const open=isHist?null:bal;
-    if(!isHist){bal+=ti-to;}
-    const close=isHist?null:bal;
+    const isHist=false;
+    const open=bal;bal+=ti-to;const close=bal;
     if(w.month!==pm){
       const isPast = w.month < TODAY.getMonth() || (w.month === TODAY.getMonth() && false);
       const isCurMonth = w.month === TODAY.getMonth();
@@ -1024,9 +1021,7 @@ function renderTable(){
       pm=w.month;
     }
     let rc='',bdg='',bc='';
-    if(!isHist){
-      if(close<0){rc='rd';bdg='Defisit!';bc='bd';dw++;}else if(close<10000000&&(ti>0||to>0)){rc='rw';bdg='Mepet';bc='bw';ww++;}else if(ti>0||to>0){bdg='Aman';bc='bok';}
-    } else if(ti>0||to>0){bdg='Historis';bc='';}
+    if(close<0){rc='rd';bdg='Defisit!';bc='bd';dw++;}else if(close<10000000&&(ti>0||to>0)){rc='rw';bdg='Mepet';bc='bw';ww++;}else if(ti>0||to>0){bdg='Aman';bc='bok';}
     const isc=w.num===CUR_W;
 
     // Build collapsible cell for in/out
@@ -1065,11 +1060,11 @@ function renderTable(){
     rows+=`<tr class="${rc}${isc?' cur':''} ${mHidden}" data-month="${w.month}">
       <td><span class="wnum">Mgg ${w.num}</span>${isc?'<span class="wtag">minggu ini</span>':''}</td>
       <td class="date-cell">${w.label}</td>
-      <td>${isHist?'<span style="font-size:11px;color:var(--text3)">—</span>':`<span style="font-size:12px;font-family:var(--mono)">${rpS(open)}</span>`}</td>
+      <td><span style="font-size:12px;font-family:var(--mono)">${rpS(open)}</span></td>
       <td>${buildCell(ins,'in')}</td>
       <td>${buildCell(outs,'out')}</td>
       <td>${isHist?'<span style="font-size:11px;color:var(--text3)">—</span>':`<span class="bal${close<0?' neg':''}">${rpS(close)}</span>`}</td>
-      <td>${bdg?`<span class="bdg ${bc}" style="${isHist?'background:var(--bg2);color:var(--text2);border-color:var(--border2)':''}">${bdg}</span>`:''}</td>
+      <td>${bdg?`<span class="bdg ${bc}">${bdg}</span>`:''}</td>
     </tr>`;
   }
   document.getElementById('tbody').innerHTML=rows;
@@ -1080,7 +1075,7 @@ function renderTable(){
 // ============================================================
 // MONTHLY CASHFLOW SUMMARY
 // ============================================================
-const MONTHS_2026=[0,1,2,3,4,5,6,7,8,9,10,11]; // Jan-Des (0-indexed)
+const MONTHS_2026=[3,4,5,6,7,8,9,10,11]; // Apr-Des (0-indexed)
 const QMAP={3:'Q2',4:'Q2',5:'Q2',6:'Q3',7:'Q3',8:'Q3',9:'Q4',10:'Q4',11:'Q4'};
 
 function buildMCData(inclEst){
